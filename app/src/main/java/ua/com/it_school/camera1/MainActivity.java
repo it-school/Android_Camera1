@@ -1,24 +1,31 @@
 package ua.com.it_school.camera1;
-
+//@SuppressWarnings("ALL")
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 
 import java.io.File;
+import java.io.FileOutputStream;
 
 import static android.content.ContentValues.TAG;
 import static android.net.Uri.fromFile;
+
 
 public class MainActivity extends Activity
 {
@@ -38,6 +45,12 @@ public class MainActivity extends Activity
         CameraCharacteristics cameraCharacteristics;
         String cameraId;
         CameraNew cameraNew;
+
+        SurfaceView surfaceView;
+        Camera camera;
+        MediaRecorder mediaRecorder;
+        File photoFile;
+        File videoFile;
 
         @Override
         protected void onCreate (Bundle savedInstanceState)
@@ -82,6 +95,37 @@ public class MainActivity extends Activity
                 }
             }
         });
+
+
+            File pictures = Environment
+                    .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+            photoFile = new File(pictures, "myphoto.jpg");
+            videoFile = new File(pictures, "myvideo.3gp");
+
+            surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+
+            SurfaceHolder holder = surfaceView.getHolder();
+            holder.addCallback(new SurfaceHolder.Callback() {
+                @Override
+                public void surfaceCreated(SurfaceHolder holder) {
+                    try {
+                        camera.setPreviewDisplay(holder);
+                        camera.startPreview();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void surfaceChanged(SurfaceHolder holder, int format,
+                                           int width, int height) {
+                }
+
+                @Override
+                public void surfaceDestroyed(SurfaceHolder holder) {
+                }
+            });
+
     }
 
     private void createDirectory() {
@@ -109,11 +153,83 @@ public class MainActivity extends Activity
         return fromFile(file);
     }
 
-    public void onClickPhoto(View view)
-    {
-        cameraNew.open(CAMERA_ID);
-//        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//        intent.putExtra(MediaStore.EXTRA_OUTPUT, generateFileUri(TYPE_PHOTO));
-//        startActivityForResult(intent, REQUEST_CODE_PHOTO);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        camera = Camera.open();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        releaseMediaRecorder();
+        if (camera != null)
+            camera.release();
+        camera = null;
+    }
+
+    public void onClickPicture(View view) {
+
+        Intent intent = new Intent();
+
+        camera.takePicture(null, null, new Camera.PictureCallback() {
+            @Override
+            public void onPictureTaken(byte[] data, Camera camera) {
+                try {
+                    FileOutputStream fos = new FileOutputStream(photoFile);
+                    fos.write(data);
+                    fos.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void onClickStartRecord(View view) {
+        if (prepareVideoRecorder()) {
+            mediaRecorder.start();
+        } else {
+            releaseMediaRecorder();
+        }
+    }
+
+    public void onClickStopRecord(View view) {
+        if (mediaRecorder != null) {
+            mediaRecorder.stop();
+            releaseMediaRecorder();
+        }
+    }
+
+    private boolean prepareVideoRecorder() {
+
+        camera.unlock();
+
+        mediaRecorder = new MediaRecorder();
+
+        mediaRecorder.setCamera(camera);
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+        mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
+        mediaRecorder.setOutputFile(videoFile.getAbsolutePath());
+        mediaRecorder.setPreviewDisplay(surfaceView.getHolder().getSurface());
+
+        try {
+            mediaRecorder.prepare();
+        } catch (Exception e) {
+            e.printStackTrace();
+            releaseMediaRecorder();
+            return false;
+        }
+        return true;
+    }
+
+    private void releaseMediaRecorder() {
+        if (mediaRecorder != null) {
+            mediaRecorder.reset();
+            mediaRecorder.release();
+            mediaRecorder = null;
+            camera.lock();
+        }
     }
 }
