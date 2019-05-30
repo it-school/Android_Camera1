@@ -1,8 +1,11 @@
 package ua.com.it_school.camera1;
 //@SuppressWarnings("ALL")
+
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -13,7 +16,8 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -57,81 +61,83 @@ public class MainActivity extends Activity
         {
             super.onCreate(savedInstanceState);
             setContentView(R.layout.activity_main);
-            button = (Button) findViewById(R.id.btnLight);
-            createDirectory();
+            button = findViewById(R.id.btnLight);
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                Intent intent = new Intent();
+                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                Uri uri = Uri.fromParts("package", this.getPackageName(), null);
+                intent.setData(uri);
+                this.startActivity(intent);
+            } else {
+                createDirectory();
 
-            cameraNew = new CameraNew(this);
+                cameraNew = new CameraNew(this);
 
-            cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-            try {
-                cameraId = cameraManager.getCameraIdList()[0];
-            } catch (CameraAccessException e) {
-                e.printStackTrace();
+                cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                try {
+                    cameraId = cameraManager.getCameraIdList()[0];
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+                button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (light) {
+                            try {
+                                cameraManager.setTorchMode(cameraId, true);
+                            } catch (CameraAccessException e) {
+                                e.printStackTrace();
+                            }
+                            light = false;
+                        } else {
+
+                            try {
+
+                                cameraManager.setTorchMode(cameraId, false);
+                            } catch (CameraAccessException e) {
+                                e.printStackTrace();
+                            }
+
+
+                            light = true;
+                        }
+                    }
+                });
+
+
+                File pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+                photoFile = new File(pictures, "myphoto.jpg");
+                videoFile = new File(pictures, "myvideo.3gp");
+
+                surfaceView = findViewById(R.id.surfaceView);
+
+                SurfaceHolder holder = surfaceView.getHolder();
+                holder.addCallback(new SurfaceHolder.Callback() {
+                    @Override
+                    public void surfaceCreated(SurfaceHolder holder) {
+                        try {
+                            camera.setPreviewDisplay(holder);
+                            camera.startPreview();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                    }
+
+                    @Override
+                    public void surfaceDestroyed(SurfaceHolder holder) {
+                    }
+                });
             }
-            button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (light)
-                {
-                    try {
-                        cameraManager.setTorchMode(cameraId, true);
-                    }
-                    catch (CameraAccessException e)
-                    {
-                        e.printStackTrace();
-                    }
-                    light = false;
-                } else {
-
-                    try {
-
-                        cameraManager.setTorchMode(cameraId, false);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-
-
-                    light = true;
-                }
-            }
-        });
-
-
-            File pictures = Environment
-                    .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-            photoFile = new File(pictures, "myphoto.jpg");
-            videoFile = new File(pictures, "myvideo.3gp");
-
-            surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
-
-            SurfaceHolder holder = surfaceView.getHolder();
-            holder.addCallback(new SurfaceHolder.Callback() {
-                @Override
-                public void surfaceCreated(SurfaceHolder holder) {
-                    try {
-                        camera.setPreviewDisplay(holder);
-                        camera.startPreview();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                @Override
-                public void surfaceChanged(SurfaceHolder holder, int format,
-                                           int width, int height) {
-                }
-
-                @Override
-                public void surfaceDestroyed(SurfaceHolder holder) {
-                }
-            });
-
     }
 
     private void createDirectory() {
-        directory = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                "MyFolder");
+        directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "MyFolder");
         if (!directory.exists())
             directory.mkdirs();
     }
@@ -145,8 +151,7 @@ public class MainActivity extends Activity
                 file = new File(path + "/" + "photo_" + System.currentTimeMillis() + ".jpg");
                 break;
             case TYPE_VIDEO:
-                file = new File(path + "/" + "video_"
-                        + System.currentTimeMillis() + ".mp4");
+                file = new File(path + "/" + "video_" + System.currentTimeMillis() + ".mp4");
                 break;
         }
         Log.d(TAG, "fileName = " + file);
@@ -231,5 +236,9 @@ public class MainActivity extends Activity
             mediaRecorder = null;
             camera.lock();
         }
+    }
+
+    public void ShowSettings(View view) {
+        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS));
     }
 }
