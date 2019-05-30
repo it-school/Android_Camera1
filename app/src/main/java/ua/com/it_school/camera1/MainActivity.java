@@ -26,6 +26,7 @@ import android.widget.Button;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Calendar;
 
 import static android.content.ContentValues.TAG;
 import static android.net.Uri.fromFile;
@@ -100,7 +101,6 @@ public class MainActivity extends Activity
                                 e.printStackTrace();
                             }
 
-
                             light = true;
                         }
                     }
@@ -108,8 +108,8 @@ public class MainActivity extends Activity
 
 
                 File pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                photoFile = new File(pictures, "myphoto.jpg");
-                videoFile = new File(pictures, "myvideo.3gp");
+//                photoFile = new File(pictures, "myphoto"+ (""+Calendar.YEAR +(Calendar.MONTH-1)+Calendar.DAY_OF_MONTH+Calendar.HOUR_OF_DAY+Calendar.MINUTE+Calendar.SECOND) +".jpg");
+                videoFile = new File(pictures, "myvideo.mp4");
 
                 surfaceView = findViewById(R.id.surfaceView);
 
@@ -181,7 +181,7 @@ public class MainActivity extends Activity
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
                 try {
-                    FileOutputStream fos = new FileOutputStream(photoFile);
+                    FileOutputStream fos = new FileOutputStream(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "myphoto" + ("" + Calendar.YEAR + "_" + (Calendar.MONTH - 1) + "_" + Calendar.DAY_OF_MONTH + "_" + Calendar.HOUR_OF_DAY + "" + Calendar.MINUTE + "_" + Calendar.SECOND) + ".jpg"));
                     fos.write(data);
                     fos.close();
                 } catch (Exception e) {
@@ -212,8 +212,8 @@ public class MainActivity extends Activity
 
         mediaRecorder = new MediaRecorder();
 
-        mediaRecorder.setCamera(camera);
-        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+        //mediaRecorder.setCamera(camera);
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
         mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
         mediaRecorder.setOutputFile(videoFile.getAbsolutePath());
